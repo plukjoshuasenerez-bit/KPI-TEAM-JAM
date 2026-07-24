@@ -710,7 +710,7 @@ async function cloudPost(payload){
   let keepActivities=(Array.isArray(latest.activities)&&latest.activities.length)?latest.activities:activities;
   if((payload.action==='activities'||payload.action==='recalc')&&Array.isArray(payload.activities))keepActivities=payload.activities;
   activities=keepActivities;
-  const _mode=(payload.action==='delete'||payload.action==='edit'||payload.action==='recalc')?'replace':'merge';
+  const _mode=(payload.action==='delete'||payload.action==='deleteAgent'||payload.action==='edit'||payload.action==='recalc')?'replace':'merge';
   await supabaseWrite({records,agents:agentList,activities:keepActivities,settings:{...keepSettings,supabaseAnonKey:''}},_mode);
   write(KEYS.records,records);write(KEYS.agents,agentList);write(KEYS.activities,activities);
   return {ok:true};
