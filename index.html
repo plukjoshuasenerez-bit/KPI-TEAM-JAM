@@ -443,7 +443,9 @@ async function saveSettings(){
     console.warn(e);
     throw new Error('Hindi mabasa ang Sheet — hindi itinuloy para hindi mabura ang data.');
   }
-    const mergedRecords=mergeRecords(latest.records||[],records);
+    // Ibase sa Sheet lang (at igalang ang mga binura) para walang bumabalik
+    const _tombS=Array.isArray(latest.deleted)?latest.deleted.map(String):[];
+    const mergedRecords=mergeRecords(latest.records||[]).filter(r=>_tombS.indexOf(String(r.id))<0);
     const mergedAgents=mergeAgents(latest.agents||[],agentList,mergedRecords.map(r=>r.agent));
     await supabaseWrite({records:mergedRecords,agents:mergedAgents,activities,settings:{...settings,supabaseAnonKey:''}});
     records=mergedRecords;agentList=mergedAgents;
@@ -638,7 +640,6 @@ async function cloudLoad(quiet){
   }
   try{
     if(!quiet)showToast('⏳ Kinukuha ang data...');
-    const localRecords=records.slice(), localAgents=agentList.slice();
     let sb={}, readOk=true;
     try{sb=await supabaseRead()}catch(e){
       readOk=false; console.warn(e);
@@ -646,13 +647,17 @@ async function cloudLoad(quiet){
       renderAll();
       return;   // <-- PROTEKSYON: huwag magsulat ng blangko
     }
+    // ANG GOOGLE SHEET ANG MASUSUNOD.
+    // Hindi na ibinabalik ng device ang lumang lokal na kopya — kaya
+    // kapag binura mo sa Sheet (o sa dashboard), tuluyan nang mawawala.
     const _tombL=Array.isArray(sb.deleted)?sb.deleted.map(String):[];
-    records=mergeRecords(localRecords,sb.records||[]).filter(r=>_tombL.indexOf(String(r.id))<0);
-    agentList=mergeAgents(localAgents,sb.agents||[],records.map(r=>r.agent));
+    records=mergeRecords(sb.records||[]).filter(r=>_tombL.indexOf(String(r.id))<0);
+    agentList=mergeAgents(sb.agents||[],records.map(r=>r.agent));
     activities=Array.isArray(sb.activities)&&sb.activities.length?sb.activities:activities;
     settings={...settings,...(sb.settings||{}),supabaseUrl:settings.supabaseUrl,supabaseAnonKey:settings.supabaseAnonKey};
     write(KEYS.records,records);write(KEYS.agents,agentList);write(KEYS.activities,activities);write(KEYS.settings,settings);
-    await supabaseWrite({records,agents:agentList,activities,settings:{...settings,supabaseAnonKey:''}});
+    // Walang isinusulat pabalik dito — pagbasa lang. Ito ang dating dahilan
+    // kung bakit bumabalik ang binura.
     loadSettingsToForm();applyBranding();renderAll();
     if(document.body.classList.contains('agent-mode')){renderAgentForm();updateFormTotals()}
     if(!quiet)showToast('✓ Data updated');
@@ -703,7 +708,8 @@ async function cloudPost(payload){
   if(!supabaseEnabled())throw new Error('Supabase is not configured');
   let latest={};try{latest=await supabaseRead()}catch(e){console.warn(e)}
   const _tomb=Array.isArray(latest.deleted)?latest.deleted.map(String):[];
-  let nextRecords=mergeRecords(latest.records||[],records).filter(r=>_tomb.indexOf(String(r.id))<0);
+  // Ibase sa laman ng Sheet (hindi sa lumang lokal) para walang bumabalik
+  let nextRecords=mergeRecords(latest.records||[]).filter(r=>_tomb.indexOf(String(r.id))<0);
   let nextAgents=mergeAgents(latest.agents||[],agentList);
   if(payload.action==='add')nextRecords=mergeRecords(nextRecords,payload.records||[]);
   if(payload.action==='delete')nextRecords=nextRecords.filter(r=>String(r.id)!==String(payload.id));
