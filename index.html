@@ -438,7 +438,11 @@ async function saveSettings(){
   }
   showToast('⏳ Saving branding to Supabase...');
   try{
-    let latest={};try{latest=await supabaseRead()}catch(e){console.warn(e)}
+    let latest={};
+  try{latest=await supabaseRead()}catch(e){
+    console.warn(e);
+    throw new Error('Hindi mabasa ang Sheet — hindi itinuloy para hindi mabura ang data.');
+  }
     const mergedRecords=mergeRecords(latest.records||[],records);
     const mergedAgents=mergeAgents(latest.agents||[],agentList,mergedRecords.map(r=>r.agent));
     await supabaseWrite({records:mergedRecords,agents:mergedAgents,activities,settings:{...settings,supabaseAnonKey:''}});
@@ -617,9 +621,11 @@ async function supabaseRead(){
   if(j&&j.ok&&j.payload){try{return JSON.parse(j.payload)}catch(e){return {}}}
   return {};
 }
-async function supabaseWrite(state){
-  let res=await fetch(getCloudUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:STATE_KEY,payload:state})});
+async function supabaseWrite(state,mode){
+  let res=await fetch(getCloudUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:STATE_KEY,payload:state,mode:mode||'merge'})});
   if(!res.ok)throw new Error('Sheets save '+res.status);
+  let j=null;try{j=await res.json()}catch(e){}
+  if(j&&j.ok===false)throw new Error(j.error||'save rejected');
   return {ok:true};
 }
 async function cloudLoad(quiet){
@@ -631,10 +637,12 @@ async function cloudLoad(quiet){
   try{
     if(!quiet)showToast('⏳ Kinukuha ang data...');
     const localRecords=records.slice(), localAgents=agentList.slice();
-    let sb={};
+    let sb={}, readOk=true;
     try{sb=await supabaseRead()}catch(e){
-      // Kapag wala pang row sa Supabase, local data ang unang ise-save.
-      if(!String(e.message||'').includes('404'))console.warn(e);
+      readOk=false; console.warn(e);
+      showToast('⚠ Hindi mabasa ang Google Sheet. Hindi muna magsusulat para hindi mabura ang data.');
+      renderAll();
+      return;   // <-- PROTEKSYON: huwag magsulat ng blangko
     }
     records=mergeRecords(localRecords,sb.records||[]);
     agentList=mergeAgents(localAgents,sb.agents||[],records.map(r=>r.agent));
@@ -706,7 +714,8 @@ async function cloudPost(payload){
   let keepActivities=(Array.isArray(latest.activities)&&latest.activities.length)?latest.activities:activities;
   if((payload.action==='activities'||payload.action==='recalc')&&Array.isArray(payload.activities))keepActivities=payload.activities;
   activities=keepActivities;
-  await supabaseWrite({records,agents:agentList,activities:keepActivities,settings:{...keepSettings,supabaseAnonKey:''}});
+  const _mode=(payload.action==='delete'||payload.action==='edit'||payload.action==='recalc')?'replace':'merge';
+  await supabaseWrite({records,agents:agentList,activities:keepActivities,settings:{...keepSettings,supabaseAnonKey:''}},_mode);
   write(KEYS.records,records);write(KEYS.agents,agentList);write(KEYS.activities,activities);
   return {ok:true};
 }
