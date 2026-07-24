@@ -103,8 +103,8 @@ body.agent-mode #agentPortal{display:block}
 </aside>
 <main class="main">
   <div class="topbar">
-    <div><h1 id="pageTitle">KPI Dashboard</h1><p id="appSubtitle">Independent KPI application</p></div>
-    <div class="actions"><button class="primary" onclick="loadData()">⟳ Load Data</button><button class="btn2" onclick="copyAgentLink()">Copy Agent Form Link</button><button class="ghost" onclick="openAgentForm()">Open Agent Form</button></div>
+    <div><h1 id="pageTitle">KPI Dashboard <span style="font-size:12px;background:#6B1560;color:#fff;padding:3px 9px;border-radius:99px;vertical-align:middle">v3</span></h1><p id="appSubtitle">Independent KPI application</p></div>
+    <div class="actions"><button class="primary" onclick="loadData()">⟳ Load Data</button><button class="ghost" onclick="resetLocalData()">Reset Local Data</button><button class="btn2" onclick="copyAgentLink()">Copy Agent Form Link</button><button class="ghost" onclick="openAgentForm()">Open Agent Form</button></div>
   </div>
 
   <section id="dashboard" class="page active">
@@ -697,6 +697,16 @@ async function saveEditRecord(){
 
 
 /* ===== LOAD DATA: kunin ang lahat ng submission ng agents mula sa Google Sheet ===== */
+
+/* ===== RESET LOCAL DATA: burahin ang kopya sa device na ito ===== */
+function resetLocalData(){
+  if(!confirm('Buburahin ang kopya ng data sa DEVICE na ito.\n\nLigtas ito — hindi maaapektuhan ang Google Sheet.\nPagkatapos, kukunin ulit ang sariwang data mula sa Sheet.\n\nTuloy?'))return;
+  try{
+    Object.keys(KEYS).forEach(function(k){localStorage.removeItem(KEYS[k])});
+  }catch(e){}
+  location.reload();
+}
+
 async function loadData(){
   if(!cloudEnabled())return alert('Ilagay muna ang Google Sheets Web App URL sa code (APPS_SCRIPT_URL).');
   showToast('⏳ Kinukuha ang data mula sa Google Sheet...');
