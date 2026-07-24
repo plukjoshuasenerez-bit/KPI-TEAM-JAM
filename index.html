@@ -270,8 +270,8 @@ const TEAM_AGENTS=[
 
 /* ============================================================
    GOOGLE SHEETS (APPS SCRIPT) CONFIGURATION
-   Cloudflare ang hosting; Supabase ang shared database.
-   Naka-configure na ang Project URL at publishable key.
+   GitHub/Cloudflare ang hosting; Google Sheets + Apps Script ang shared database.
+   Ang Agents at Records ay naka-hiwalay at one row per item para madaling basahin.
    ============================================================ */
 /* ▼▼▼ PALITAN LANG ITO: Web App URL mula sa Apps Script (dulo /exec) ▼▼▼ */
 const APPS_SCRIPT_URL="PASTE_YOUR_WEB_APP_URL_HERE";
@@ -535,7 +535,7 @@ async function submitAgentForm(){
   if(!entries.length)return alert('Enter at least one activity count.');
 
   if(cloudEnabled()){
-    // Submit to Supabase — shared sa lahat ng devices
+    // Submit to Google Sheets — shared sa lahat ng devices
     let btn=event&&event.target;if(btn)btn.disabled=true;
     showToast('⏳ Sine-save...');
     try{
@@ -594,7 +594,7 @@ function viewDashboard(){
   renderAll();
 }
 
-/* ===== SAFE CLOUD SYNC: SUPABASE PRIMARY ===== */
+/* ===== SAFE CLOUD SYNC: GOOGLE SHEETS + APPS SCRIPT ===== */
 function normDate(v){
   let s=String(v||'').trim();
   if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
@@ -697,7 +697,7 @@ async function loadData(){
 }
 
 async function cloudPost(payload){
-  if(!supabaseEnabled())throw new Error('Supabase is not configured');
+  if(!supabaseEnabled())throw new Error('Google Sheets Web App is not configured');
   let latest={};try{latest=await supabaseRead()}catch(e){console.warn(e)}
   let nextRecords=mergeRecords(latest.records||[],records);
   let nextAgents=mergeAgents(latest.agents||[],agentList);
