@@ -103,7 +103,7 @@ body.agent-mode #agentPortal{display:block}
 </aside>
 <main class="main">
   <div class="topbar">
-    <div><h1 id="pageTitle">KPI Dashboard <span style="font-size:12px;background:#6B1560;color:#fff;padding:3px 9px;border-radius:99px;vertical-align:middle">v3</span></h1><p id="appSubtitle">Independent KPI application</p></div>
+    <div><h1 id="pageTitle">KPI Dashboard <span style="font-size:12px;background:#6B1560;color:#fff;padding:3px 9px;border-radius:99px;vertical-align:middle">v4</span></h1><p id="appSubtitle">Independent KPI application</p></div>
     <div class="actions"><button class="primary" onclick="loadData()">⟳ Load Data</button><button class="ghost" onclick="resetLocalData()">Reset Local Data</button><button class="btn2" onclick="copyAgentLink()">Copy Agent Form Link</button><button class="ghost" onclick="openAgentForm()">Open Agent Form</button></div>
   </div>
 
@@ -715,8 +715,12 @@ async function loadData(){
 }
 
 async function cloudPost(payload){
-  if(!supabaseEnabled())throw new Error('Supabase is not configured');
-  let latest={};try{latest=await supabaseRead()}catch(e){console.warn(e)}
+  if(!supabaseEnabled())throw new Error('Google Sheets URL is not configured');
+  let latest={};
+  try{latest=await supabaseRead()}catch(e){
+    console.warn(e);
+    throw new Error('Hindi mabasa ang Sheet — hindi itinuloy para walang mawala.');
+  }
   const _tomb=Array.isArray(latest.deleted)?latest.deleted.map(String):[];
   // Ibase sa laman ng Sheet (hindi sa lumang lokal) para walang bumabalik
   let nextRecords=mergeRecords(latest.records||[]).filter(r=>_tomb.indexOf(String(r.id))<0);
@@ -761,6 +765,10 @@ function init(){
     renderAgentForm();
   }
   if(cloudEnabled())cloudLoad(true).then(()=>{if(document.body.classList.contains('agent-mode'))updateFormTotals()});
+  // Auto-refresh sa agent form: para agad sumulpot ang bagong pangalan at task
+  setInterval(function(){
+    if(cloudEnabled()&&document.body.classList.contains('agent-mode'))cloudLoad(true);
+  },20000);
 }
 init();
 </script>
